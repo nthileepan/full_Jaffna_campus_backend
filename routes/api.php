@@ -16,6 +16,8 @@ use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\Attendance_StudentTimetableController;
 use App\Http\Controllers\Attendance_SlotController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\UserDetailsController;
+use App\Http\Controllers\Attendance_LecturerTimetableController;
 
 use App\Http\Controllers\TimetableController;
 
@@ -26,6 +28,7 @@ use App\Http\Controllers\StudentController;
 
 use App\Http\Controllers\LoginController;
 use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\LectureAttendanceController;
 
 Route::get('/notification', [NotificationController::class, 'checkNotification']);
 
@@ -86,6 +89,7 @@ Route::delete('/assign/{id}', [AssigntomoduleController::class, 'destroy']);
 //thileepan
 Route::post('/generate-otp', [Attendance_OtpController::class, 'create']);
 Route::post('/verify-otp', [AttendanceController::class, 'verifyOtp']);
+Route::post('/attendance/{studentId}', [AttendanceController::class, 'getStudentAttendanceById']);
 Route::get('/verify-qr', [AttendanceController::class, 'verifyQr']);
 Route::get('/student/{studentId}/timetable', [Attendance_StudentTimetableController::class, 'getStudentTimetable']);
 Route::get('/Slot', [Attendance_SlotController::class, 'getAllSlot']);
@@ -106,6 +110,9 @@ Route::get('/departmentm/{department_id}', [ModuleController::class, 'filterByDe
 
 //group c 
 Route::get('/getstudents',[StudentController::class,'index']);
+Route::get('/getdepartments',[StudentController::class,'department']);
+Route::get('/getbatches',[StudentController::class,'batches']);
+Route::get('/getstudents',[StudentController::class,'index']);
 Route::post('/addStudent',[StudentController::class,'savestudents']);
 Route::post('/putstudent/{id}',[StudentController::class,'updateStudent']);
 Route::delete('/students/{id}',[StudentController::class,'destroy']);
@@ -122,3 +129,10 @@ Route::prefix('payment')->group(function () {
 
 });
 
+
+
+Route::get('/user-details/{userId}', [UserDetailsController::class, 'getUserDetails']);
+
+Route::get('/lecturer-timetable/{lectureId}', [Attendance_LecturerTimetableController::class, 'getLecturerTimetable']);
+
+Route::get('/class-attendance', [LectureAttendanceController::class, 'getClassAttendance']);

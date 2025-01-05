@@ -4,13 +4,17 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Hash;
 
 class Student extends Model
 {
     use HasFactory;
     protected $fillable = [
         'zoho_no',
-        'nic_number',
+        'nic_no',
+        'department',
+        'batch',
         'first_name',
         'middle_name',
         'last_name',
@@ -23,8 +27,7 @@ class Student extends Model
         'country',
         'email',
         'phone_number',
-        'zoho_no',
-        'qr_code'
+        'user_id',
     ];
 
     public function emergencyContact()
@@ -79,5 +82,50 @@ class Student extends Model
     public function adminUse()
     {
         return $this->hasOne(admin_use::class);
+    }
+//department
+    public function department()
+    {
+        return $this->belongsTo(departmentModel::class);
+    }
+    public function batch()
+    {
+        return $this->belongsTo(batch::class);
+    }
+    // Add relationship to User model
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    // Method to create associated user account
+    public function createUserAccount($password = null)
+    {
+        // Generate password if not provided
+        if (!$password) {
+            $password = Str::random(10);
+        }
+
+        // Create user
+        $user = User::create([
+            'name' => $this->first_name . ' ' . $this->last_name,
+            'email' => $this->email,
+            'password' => Hash::make($password),
+        ]);
+
+        // Assign student role to user
+        $studentRole = Role::where('slug', 'student')->first();
+        if ($studentRole) {
+            $user->roles()->attach($studentRole->id);
+        }
+
+        // Associate user with student
+        $this->user_id = $user->id;
+        $this->save();
+
+        return [
+            'user' => $user,
+            'password' => $password // Return plain password for first-time communication
+        ];
     }
 }

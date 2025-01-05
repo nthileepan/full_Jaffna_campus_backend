@@ -4,8 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\admin_use;
 use App\Models\applicant_checklist;
+use App\Models\Batch;
 use App\Models\city;
 use App\Models\course_type;
+use App\Models\departmentModel;
 use App\Models\emergency_contact;
 use App\Models\joined_from;
 use App\Models\name_of_course;
@@ -40,13 +42,23 @@ class StudentController extends Controller
             'studentNic',
             'personalStatement',
             'whoWillPay',
-            'adminUse'
+            'adminUse',
         ])->get();
         return response()->json(['students' => $students]);
     }
 
+    public function department()
+    {
+        $departments = departmentModel::where('status', 'Active')->get();
+        return response()->json(['departments' => $departments]);
+    }
 
-    public function create() {}
+
+    public function batches()
+    {
+        $batches = Batch::select('batch_name', 'id')->get();
+        return response()->json(['batches' => $batches]);
+    }
 
 
     public function savestudents(Request $request)
@@ -135,14 +147,15 @@ class StudentController extends Controller
         //     'paymentStatus' => 'nullable|string|in:approved,rejected',
         // ]);
 
-        // return response()->json(['message' => 'Student saved successfully'], 200);
-        try{
+
         $dateofmonth = "{$request->year}-{$request->month}-{$request->day}";
 
 
         $student = Student::create([
             'zoho_no' => $request->zohonumber,
-            'nic_number' => $request->nic,
+            'nic_no' => $request->nic,
+            'department' => $request->department,
+            'batch' => $request->batch,
             'first_name' => $request->studentFirstName,
             'middle_name' => $request->studentMiddleName,
             'last_name' => $request->studentLastName,
@@ -157,11 +170,11 @@ class StudentController extends Controller
             'phone_number' => $request->phone,
         ]);
 
-        $qrCodeContent = $student->id . '-' . $student->first_name;
-        $qrCode = QrCode::format('png')->size(300)->generate($qrCodeContent);
-        $base64QRCode = base64_encode($qrCode);
-        $student->qr_code = 'data:image/png;base64,' . $base64QRCode;
-        $student->save();
+        // $qrCodeContent = $student->id . '-' . $student->first_name;
+        // $qrCode = QrCode::format('png')->size(300)->generate($qrCodeContent);
+        // $base64QRCode = base64_encode($qrCode);
+        // $student->qr_code = 'data:image/png;base64,' . $base64QRCode;
+        // $student->save();
 
         $emergency_contact = emergency_contact::create([
             'student_id' => $student->id,
@@ -181,6 +194,8 @@ class StudentController extends Controller
             'student_id' => $student->id,
             'preferred_mode' => $request->appliedPreferredMode,
             'program_applied_for' => $request->programApplied,
+            'department' => $request->department,
+            'batch' => $request->batch,
             'course_name' => $request->appliedCourseName,
             'student_number' => $request->appliedStudentNumber,
         ]);
@@ -321,15 +336,26 @@ class StudentController extends Controller
             'status' => $request->paymentStatus,
         ]);
 
+        $password = $student->first_name . $student->id;
+        $userAccount = $student->createUserAccount($password);
 
-        return response()->json(['message' => 'Student saved successfully', 'student' => $student], 200);
-    } catch (\Exception $e) {
-        return response()->json(['message' => 'Error saving student', 'error' => $e->getMessage()], 500);
+
+
+
+        return response()->json([
+            'message' => 'Student created successfully',
+            'student' => $student,
+            'user_credentials' => [
+                'email' => $userAccount['user']->email,
+                'password' => $userAccount['password']
+            ]
+        ], 200);
     }
+
+
+    public function show(Student $student)
+    {
     }
-
-
-    public function show(Student $student) {}
 
 
     public function updateStudent(Request $request, $id)
@@ -338,7 +364,7 @@ class StudentController extends Controller
         // Fetch the student record based on the ID
         // return response()->json(['message'=>'xf','id',$id]);
 
-       
+
 
         $student = Student::find($id);
 
@@ -368,20 +394,19 @@ class StudentController extends Controller
         $student->phone_number = $request->phone;
 
         // Generate and update QR code
-        $qrCodeContent = $student->id . '-' . $student->first_name;
-        $qrCode = QrCode::format('png')->size(300)->generate($qrCodeContent);
-        $base64QRCode = base64_encode($qrCode);
-        $student->qr_code = 'data:image/png;base64,' . $base64QRCode;
+        // $qrCodeContent = $student->id . '-' . $student->first_name;
+        // $qrCode = QrCode::format('png')->size(300)->generate($qrCodeContent);
+        // $base64QRCode = base64_encode($qrCode);
+        // $student->qr_code = 'data:image/png;base64,' . $base64QRCode;
 
-        // Save the updated student data
         $student->save();
 
         // Generate QR Code and update it
-        $qrCodeContent = $student->id . '-' . $student->first_name;
-        $qrCode = QrCode::format('png')->size(300)->generate($qrCodeContent);
-        $base64QRCode = base64_encode($qrCode);
-        $student->qr_code = 'data:image/png;base64,' . $base64QRCode;
-        $student->save();
+        // $qrCodeContent = $student->id . '-' . $student->first_name;
+        // $qrCode = QrCode::format('png')->size(300)->generate($qrCodeContent);
+        // $base64QRCode = base64_encode($qrCode);
+        // $student->qr_code = 'data:image/png;base64,' . $base64QRCode;
+        // $student->save();
 
         // Update emergency contact
         $emergency_contact = emergency_contact::where('student_id', $student->id)->first();
@@ -406,6 +431,8 @@ class StudentController extends Controller
             $name_of_course->update([
                 'preferred_mode' => $request->appliedPreferredMode,
                 'program_applied_for' => $request->programApplied,
+                'batch' => $request->batch,
+                'department' => $request->department,
                 'course_name' => $request->appliedCourseName,
                 'student_number' => $request->appliedStudentNumber,
             ]);
@@ -413,23 +440,27 @@ class StudentController extends Controller
 
         if ($request->hasFile('selectedOlFile')) {
             $file = $request->file('selectedOlFile');
-            $olpath = $file->move(public_path('docs/documents'), $file->getClientOriginalName());
-            $olpath = 'docs/documents/' . $file->getClientOriginalName();
+            $fileName = time() . '_' . $file->getClientOriginalName();
+            $file->move(public_path('docs/documents'), $fileName);
+            $olpath = 'docs/documents/' . $fileName;
         } else {
             $olpath = null;
         }
 
         if ($request->hasFile('selectedAlFile')) {
             $file = $request->file('selectedAlFile');
-            $alpath = $file->move(public_path('docs/documents'), $file->getClientOriginalName());
-            $alpath = 'docs/documents/' . $file->getClientOriginalName();
+            $fileName = time() . '_' . $file->getClientOriginalName();
+            $file->move(public_path('docs/documents'), $fileName);
+            $alpath = 'docs/documents/' . $fileName;
         } else {
             $alpath = null;
         }
 
-        // Update qualifications
+
+
         $qualifications = qualifications::where('student_id', $student->id)->first();
         if ($qualifications) {
+
             $qualifications->update([
                 'olexam' => $request->olExamName,
                 'olpath' => $olpath,
@@ -437,6 +468,7 @@ class StudentController extends Controller
                 'alpath' => $alpath,
             ]);
         }
+
 
         // Update other_qualification
         $other_qualifications = other_qualifications::where('student_id', $student->id)->first();
@@ -466,45 +498,69 @@ class StudentController extends Controller
         if ($request->hasFile('selectedImageFile')) {
             $file = $request->file('selectedImageFile');
             $extension = $file->getClientOriginalExtension();
-            $fileName = time() . '.' . $extension;
+            $fileName = time() . '_' . uniqid() . '.' . $extension;
             $file->move(public_path('docs/image'), $fileName);
             $image = 'docs/image/' . $fileName;
         } else {
             $image = null;
         }
 
-        
-        $student_image = student_image::where('student_id', $student->id)->first();
 
+        $student_image = student_image::where('student_id', $student->id)->first();
         if ($student_image) {
-            
+            if ($image && $student_image->image && file_exists(public_path($student_image->image))) {
+                unlink(public_path($student_image->image));
+            }
             $student_image->update([
-                'image' => $image, 
+                'image' => $image,
             ]);
-        } else {
-           
-            return response()->json(['error' => 'Student image not found'], 404);
         }
 
-        $st_dob = $request->hasFile('selectedFile1') ? $this->handleFileUpload($request->file('selectedFile1'), 'docs/documets') : null;
-        $st_nic = $request->hasFile('selectedFile2') ? $this->handleFileUpload($request->file('selectedFile2'), 'docs/documets') : null;
+
+        if ($request->hasFile('selectedFile1')) {
+            $file = $request->file('selectedFile1');
+            $extension = $file->getClientOriginalExtension();
+            $fileName = time() . '_' . uniqid() . '.' . $extension;
+            $file->move(public_path('docs/documents'), $fileName);
+            $st_dob = 'docs/documents/' . $fileName;
+        } else {
+            $st_dob = null;
+        }
 
         // Update student_date_of_birth_certificate
         $student_date_of_birth_certificate = student_date_of_birth_certificate::where('student_id', $student->id)->first();
         if ($student_date_of_birth_certificate) {
+
+            if ($st_dob && $student_date_of_birth_certificate->date_of_birth_certificate && file_exists(public_path($student_date_of_birth_certificate->date_of_birth_certificate))) {
+                unlink(public_path($student_date_of_birth_certificate->date_of_birth_certificate));
+            }
+            // Update existing record
             $student_date_of_birth_certificate->update([
                 'date_of_birth_certificate' => $st_dob,
             ]);
         }
+        if ($request->hasFile('selectedFile2')) {
+            $file = $request->file('selectedFile2');
+            $extension = $file->getClientOriginalExtension();
+            $fileName = time() . '_' . uniqid() . '.' . $extension;
+            $file->move(public_path('docs/documents'), $fileName);
+            $st_nic = 'docs/documents/' . $fileName;
+        } else {
+            $st_nic = null;
+        }
 
-        // Update student_nic
         $student_nic = student_nic::where('student_id', $student->id)->first();
         if ($student_nic) {
+            // Optional: Delete old NIC file if a new file is uploaded
+            if ($st_nic && $student_nic->nic && file_exists(public_path($student_nic->nic))) {
+                unlink(public_path($student_nic->nic));
+            }
+
+            // Update existing record
             $student_nic->update([
                 'nic' => $st_nic,
             ]);
         }
-
         // Update personal_statement
         $personal_statement = personal_statement::where('student_id', $student->id)->first();
         if ($personal_statement) {
@@ -557,13 +613,13 @@ class StudentController extends Controller
                 'name_of_course' => $name_of_course,
                 'qualifications' => $qualifications,
                 'other_qualifications' => $other_qualifications,
-                'applicant_checklist' =>  $applicant_checklist,
-                'student_image' =>  $student_image,
-                'student_date_of_birth_certificate' =>  $student_date_of_birth_certificate,
+                'applicant_checklist' => $applicant_checklist,
+                'student_image' => $student_image,
+                'student_date_of_birth_certificate' => $student_date_of_birth_certificate,
                 'student_nic' => $student_nic,
                 'personal_statement' => $personal_statement,
                 'who_will_pay' => $who_will_pay,
-                'admin_use' =>  $admin_use,
+                'admin_use' => $admin_use,
 
 
             ],
@@ -594,7 +650,9 @@ class StudentController extends Controller
             'studentNic',
             'personalStatement',
             'whoWillPay',
-            'adminUse'
+            'adminUse',
+            'department',
+            'batch',
         ])->get();
 
         return response()->json(['students' => $students], 200);

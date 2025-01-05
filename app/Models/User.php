@@ -42,4 +42,36 @@ class User extends Authenticatable
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
     ];
+
+    public function roles()
+    {
+        return $this->belongsToMany(Role::class);
+    }
+
+    // Check if user has specific role
+    public function hasRole($role)
+    {
+        return $this->roles->contains('slug', $role);
+    }
+
+    // Check if user has specific privilege
+    public function hasPrivilege($privilege)
+    {
+        foreach ($this->roles as $role) {
+            if ($role->hasPrivilege($privilege)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public function student()
+    {
+        return $this->hasOne(Student::class);
+    }
+
+    public function lecture()
+    {
+        return $this->hasOne(lectureModel::class);
+    }
 }

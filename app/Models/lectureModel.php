@@ -22,5 +22,12 @@ class lectureModel extends Model
         'lecture_gender',
         'off_day',
         'lecture_status',
+        'user_id',
     ];
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
+    
 }

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Attendance_Otp;
 use App\Models\Attendance;
+use App\Models\Student;
 use Carbon\Carbon;
 
 class AttendanceController extends Controller
@@ -141,5 +142,66 @@ class AttendanceController extends Controller
         }
     }
 
-    
+    /**
+     * Get attendance details for a specific student by ID.
+     *
+     * @param int $studentId
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getStudentAttendanceById($studentId)
+    {
+        $student = Student::find($studentId);
+
+        if (!$student) {
+            return response()->json(['message' => 'Student not found'], 404);
+        }
+
+        $attendance = Attendance::where('student_id', $studentId)->get();
+
+        return response()->json([
+            'student' => $student,
+            'attendance' => $attendance
+        ]);
+    }
+
+    /**
+     * Get filtered attendance details for a specific student by ID with additional data.
+     *
+     * @param \Illuminate\Http\Request $request
+     * @param int $studentId
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getFilteredStudentAttendanceDetails(Request $request, $studentId)
+    {
+        $student = Student::find($studentId);
+
+        if (!$student) {
+            return response()->json(['message' => 'Student not found'], 404);
+        }
+
+        $query = Attendance::where('student_id', $studentId);
+
+        // Apply filters if provided in the request
+        if ($request->has('status')) {
+            $query->where('status', $request->input('status'));
+        }
+
+        if ($request->has('verification_type')) {
+            $query->where('verification_type', $request->input('verification_type'));
+        }
+
+        if ($request->has('attendance_at_start') && $request->has('attendance_at_end')) {
+            $query->whereBetween('attendance_at', [
+                $request->input('attendance_at_start'),
+                $request->input('attendance_at_end')
+            ]);
+        }
+
+        $filteredAttendance = $query->get();
+
+        return response()->json([
+            'student' => $student,
+            'attendance' => $filteredAttendance
+        ]);
+    }
 }

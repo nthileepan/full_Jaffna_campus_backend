@@ -22,32 +22,27 @@ class Attendance_StudentTimetableController extends Controller
      */
     public function getStudentTimetable($studentId)
     {
-        // Step 1: Retrieve the student's department
-        $studentDepartment = Attendance_StudentDepartment::where('student_id', $studentId)
-                                               ->first();
+        // Step 1: Retrieve the student with their department and batch
+        $student = Attendance_Student::find($studentId);
 
-        if (!$studentDepartment) {
-            return response()->json(['message' => 'Department not found for this student.'], 404);
+        if (!$student) {
+            return response()->json(['message' => 'Student not found.'], 404);
         }
 
-        // Step 2: Retrieve the student's batch
-        $studentBatch = Attendance_StudentBatch::where('student_id', $studentId)
-                                    ->first();
-
-        if (!$studentBatch) {
-            return response()->json(['message' => 'Batch not found for this student.'], 404);
+        if (!$student->department || !$student->batch) {
+            return response()->json(['message' => 'Department or batch not assigned to this student.'], 404);
         }
 
-        // Step 3: Find the student's timetable using department_id and batch_id
-        $timeTables = Attendance_TimeTable::where('department_id', $studentDepartment->department_id)
-                               ->where('batch_id', $studentBatch->batch_id)
+        // Step 2: Find the student's timetable using department and batch
+        $timeTables = Attendance_TimeTable::where('department_id', $student->department)
+                               ->where('batch_id', $student->batch)
                                ->get();
 
         if ($timeTables->isEmpty()) {
             return response()->json(['message' => 'No timetable found for this student.'], 404);
         }
 
-        // Step 4: Include slot and module details in the timetable
+        // Step 3: Include slot and module details in the timetable
         $timeTablesWithDetails = $timeTables->map(function ($timeTable) {
             // Load the associated slot details for each timetable entry
             $slot = Attendance_Slot::find($timeTable->slot_id);

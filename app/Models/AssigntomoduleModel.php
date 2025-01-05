@@ -9,7 +9,7 @@ class AssigntomoduleModel extends Model
     use HasFactory;
 
     // Specify the table associated with the model
-    protected $table = 'aasigntomodule'; // Ensure this matches the table name in your database
+    protected $table = 'assign_modules'; // Ensure this matches the table name in your database
 
     // Specify the primary key if it's not 'id'
     protected $primaryKey = 'assigntomodule_id'; // Use the actual primary key column in your table

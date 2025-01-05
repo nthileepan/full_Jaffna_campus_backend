@@ -45,18 +45,19 @@ class Attendance_TimeTable extends Model
         'end_date',
     ];
 
+    public function batch()
+    {
+        return $this->belongsTo(batch::class);
+    }
+    
     public function department()
     {
-        return $this->belongsTo(Attendance_Department::class, 'department_id', 'id');
+        return $this->belongsTo(departmentModel::class, 'department_id', 'department_id');
     }
 
     /**
-     * Define the relationship with the Batch model.
+     * Define the relationship with the Batch model
      */
-    public function batch()
-    {
-        return $this->belongsTo(Attendance_Batch::class, 'batch_id', 'id');
-    }
 
     /**
      * Define the relationship with the Module model.
